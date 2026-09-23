@@ -7,3 +7,6 @@ renv/library/
 renv/staging/
 renv/python/
 .env
+
+# Downloaded GEO data
+data/GSE*/

@@ -186,14 +186,31 @@ print(assoc, digits = 3)
 
 ylab <- paste(gene_symbol, "expression (VST)")
 
-p_group <- ggplot(meta, aes(group, vst)) +
-  geom_boxplot(outlier.shape = NA, fill = "grey90") +
-  geom_jitter(width = 0.2, size = 1, alpha = 0.6) +
-  labs(x = NULL, y = ylab, title = paste(gene_symbol, "in", gse_id),
+# GEO uses the old NAFL/NASH terms; relabel with MASLD nomenclature for display
+masld_label <- function(x) {
+  x <- sub("^control$", "Healthy control", x, ignore.case = TRUE)
+  x <- sub("^NAFL$", "MASL", x)
+  sub("^NASH_", "MASH ", x)
+}
+group_n <- table(meta$group)
+meta$category <- factor(
+  ifelse(meta$group == ref_level, "Healthy control",
+         ifelse(grepl("^NASH", meta$group), "MASH", "MASL")),
+  levels = c("Healthy control", "MASL", "MASH")
+)
+
+p_group <- ggplot(meta, aes(group, vst, fill = category)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.5, show.legend = FALSE) +
+  scale_x_discrete(labels = function(x) sprintf("%s\n(n=%d)", masld_label(x), group_n[x])) +
+  scale_fill_manual(values = c("Healthy control" = "#9CA3AF", "MASL" = "#60A5FA", "MASH" = "#F87171"),
+                    drop = FALSE) +
+  labs(x = NULL, y = ylab, fill = NULL, title = paste(gene_symbol, "in", gse_id),
        subtitle = sprintf("Kruskal-Wallis p = %.2g", kw$p.value)) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1))
-ggsave(file.path(out_dir, "slc6a6_by_group.png"), p_group, width = 6, height = 4.5, dpi = 300)
+  theme(legend.position = "top")
+ggsave(file.path(out_dir, "slc6a6_by_group.png"), p_group, width = 7, height = 4.5, dpi = 300)
+print(p_group)
 
 if (any(!is.na(nafld$fibrosis))) {
   p_fib <- ggplot(nafld[!is.na(nafld$fibrosis), ], aes(factor(fibrosis), vst)) +
